@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snakes & Ladders - Traditional Layout</title>
+    <style>
+        body {
+            margin: 0; padding: 10px; background-color: #1a1a1a; color: white;
+            font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center;
+        }
+        
+        #mode-screen {
+            display: block; background: #2b2b2b; padding: 20px; border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7); text-align: center;
+            max-width: 360px; width: 100%; margin-top: 20px; box-sizing: border-box;
+        }
+        .mode-btn {
+            background: #3a3a4a; color: white; border: 2px solid #444;
+            padding: 12px 15px; margin: 8px 0; font-size: 15px; font-weight: bold;
+            cursor: pointer; border-radius: 10px; width: 100%; transition: 0.2s;
+            box-sizing: border-box; text-align: left; display: flex; align-items: center; gap: 10px;
+        }
+        .mode-btn:hover { background: #00ffcc; color: #1a1a1a; border-color: #00ffcc; transform: translateY(-2px); }
+
+        #game-container-wrapper { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 345px; }
+        
+        #game-screen { display: flex; flex-direction: column; gap: 12px; align-items: center; background: #2b2b2b; padding: 12px; border-radius: 15px; width: 100%; box-sizing: border-box; }
+        
+        canvas { border: 4px solid #444; border-radius: 8px; background-color: #0d0d0d; width: 320px; height: 320px; }
+        
+        #side-panel { 
+            display: flex; 
+            flex-direction: row; 
+            gap: 10px; 
+            width: 100%; 
+            justify-content: space-between;
+            align-items: stretch;
+        }
+        
+        #ui-box { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background: #3a3a4a; 
+            padding: 8px; 
+            border-radius: 10px; 
+            gap: 6px; 
+            flex: 1;
+            max-width: 150px;
+        }
+        
+        #chat-box {
+            background: #1a1a1a; 
+            border: 1px solid #444; 
+            border-radius: 8px;
+            display: flex; 
+            flex-direction: column; 
+            flex: 1;
+            height: 125px;
+            overflow: hidden;
+        }
+        
+        .top-bar { display: flex; width: 100%; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        
+        .dice {
+            width: 44px; height: 44px; background: #fff; color: #000; font-size: 22px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; border-radius: 10px; margin: 2px 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .rolling { animation: spin 0.12s linear infinite; background: #ffea00 !important; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .action-btn { background: #00ffcc; color: #1a1a1a; border: none; padding: 8px; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 15px; width: 100%; }
+        .action-btn:disabled { background: #555; color: #aaa; cursor: not-allowed; opacity: 0.5; }
+        
+        .swap-btn { background: #ff9f43; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 12px; width: 100%; display: none; text-shadow: 0 1px 2px rgba(0,0,0,0.5); margin-bottom: 2px; }
+        .swap-btn:hover { background: #ffaa66; }
+
+        .skip-btn { background: #9b59b6; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 12px; width: 100%; display: none; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .skip-btn:hover { background: #a569bd; }
+
+        .turn-box { padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; display: inline-block; margin-top: 2px; }
+        .back-btn { background: #ff4757; color: white; border: none; padding: 5px 10px; font-weight: bold; border-radius: 20px; cursor: pointer; font-size: 12px; }
+
+        #chat-messages { 
+            flex: 1; 
+            padding: 6px; 
+            overflow-y: auto; 
+            font-size: 11px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+        }
+        
+        #chat-messages::-webkit-scrollbar { width: 4px; }
+        #chat-messages::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        .msg { background: #2b2b2b; padding: 4px 6px; border-radius: 5px; line-height: 1.3; }
+    </style>
+</head>
+<body>
+
+    <div id="mode-screen">
+        <h2 style="color: #00ffcc; margin: 0 0 5px 0; font-size: 22px;">Snakes & Ladders</h2>
+        <p style="color: #aaa; font-size: 12px; margin: 0 0 15px 0;">Select a mode to play 🎲</p>
+        
+        <button class="mode-btn" onclick="startOfflineMode('single')">
+            🤖 Vs Computer (Single Player)
+        </button>
+
+        <button class="mode-btn" onclick="startOfflineMode('double')">
+            👥 2 Players Mode (Offline)
+        </button>
+
+        <button class="mode-btn" onclick="startOfflineMode('three')">
+            👨‍👦‍👦 3 Players Mode (Offline)
+        </button>
+
+        <button class="mode-btn" onclick="startOfflineMode('four')">
+            👨‍👩‍👦‍👦 4 Players Mode (Offline)
+        </button>
+    </div>
+
+    <div id="game-container-wrapper">
+        <div class="top-bar">
+            <button class="back-btn" onclick="leaveGame()">Menu</button>
+            <h3 id="game-title" style="margin:0; color: #00ffcc; font-size: 15px;">Game Mode</h3>
+            <div style="font-size: 11px; color: #aaa;">Status: <span style="color:#00ffcc;">Local</span></div>
+        </div>
+
+        <div id="game-screen">
+            <canvas id="board" width="320" height="320"></canvas>
+
+            <div id="side-panel">
+                
+                <div id="chat-box">
+                    <div id="chat-messages">
+                        <div class="msg" style="color:#00ffcc;">System: Collect Orange Coins to Swap, Purple Coins to Skip an opponent!</div>
+                    </div>
+                </div>
+
+                <div id="ui-box">
+                    <div style="text-align:center; font-weight:bold; font-size:12px;">Turn: <br><span id="player-turn" class="turn-box" style="background:#ff4757; color:white;">Player 1</span></div>
+                    <div id="dice" class="dice">1</div>
+                    <button id="roll-btn" class="action-btn" onclick="handleDiceClick()">Roll</button>
+                    <button id="swap-btn" class="swap-btn" onclick="handleSwapPositions()">🔄 Swap</button>
+                    <button id="skip-btn" class="skip-btn" onclick="handleSkipPlayer()">🚫 Skip Turn</button>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('board');
+        const ctx = canvas.getContext('2d');
+        const tileSize = canvas.width / 10;
+
+        let gameMode = 'single'; 
+        let totalPlayers = 2; 
+
+        // Safe Audio Engine
+        let audioCtx = null;
+        let menuInterval = null; 
+
+        function initAudio() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.log("Audio not supported or blocked");
+            }
+        }
+
+        function startMenuMusic() {
+            initAudio();
+            if (!audioCtx || menuInterval) return;
+
+            let sequence = [
+                { note: 261.63, duration: 0.2 }, 
+                { note: 293.66, duration: 0.2 }, 
+                { note: 329.63, duration: 0.2 }, 
+                { note: 392.00, duration: 0.4 }, 
+                { note: 329.63, duration: 0.2 }, 
+                { note: 392.00, duration: 0.4 }  
+            ];
+            
+            let playMelody = () => {
+                if(!audioCtx || audioCtx.state === 'suspended') return;
+                let now = audioCtx.currentTime;
+                let currentDelay = 0;
+
+                sequence.forEach((s) => {
+                    try {
+                        let osc = audioCtx.createOscillator();
+                        let gain = audioCtx.createGain();
+                        osc.type = 'sine'; 
+                        osc.frequency.setValueAtTime(s.note, now + currentDelay);
+                        gain.gain.setValueAtTime(0.04, now + currentDelay); 
+                        gain.gain.linearRampToValueAtTime(0.001, now + currentDelay + s.duration - 0.02);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + currentDelay);
+                        osc.stop(now + currentDelay + s.duration);
+                    } catch(e){}
+                    currentDelay += s.duration;
+                });
+            };
+
+            playMelody();
+            menuInterval = setInterval(playMelody, 1800); 
+        }
+
+        function stopMenuMusic() {
+            if (menuInterval) {
+                clearInterval(menuInterval);
+                menuInterval = null;
+            }
+        }
+
+        function playDiceSound() {
+            initAudio();
+            if(!audioCtx || audioCtx.state === 'suspended') return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } catch(e){}
+        }
+
+        function playLadderSound() {
+            initAudio();
+            if(!audioCtx || audioCtx.state === 'suspended') return;
+            try {
+                let now = audioCtx.currentTime;
+                let notes = [261.63, 329.63, 392.00, 523.25]; 
+                notes.forEach((freq, index) => {
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + index * 0.1);
+                    gain.gain.setValueAtTime(0.15, now + index * 0.1);
+                    gain.gain.linearRampToValueAtTime(0.01, now + index * 0.1 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + index * 0.1);
+                    osc.stop(now + index * 0.1 + 0.15);
+                });
+            } catch(e){}
+        }
+
+        function playSnakeSound() {
+            initAudio();
+            if(!audioCtx || audioCtx.state === 'suspended') return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.4);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            } catch(e){}
+        }
+
+        function playCoinSound() {
+            initAudio();
+            if(!audioCtx || audioCtx.state === 'suspended') return;
+            try {
+                let now = audioCtx.currentTime;
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, now); 
+                osc.frequency.setValueAtTime(880.00, now + 0.08); 
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(now + 0.25);
+            } catch(e){}
+        }
+
+        const playerThemes = [
+            { base: '#ff4757', name: 'Player 1' },
+            { base: '#1e90ff', name: 'Player 2' },
+            { base: '#2ed573', name: 'Player 3' },
+            { base: '#ffa502', name: 'Player 4' }
+        ];
+
+        let playerPositions = [1, 1, 1, 1];
+        let playerCurrentX = [16, 16, 16, 16]; 
+        let playerCurrentY = [304, 304, 304, 304];
+        let currentTurn = 0; 
+        let isAnimating = false;
+        let lastDiceRolled = 1; 
+
+        let hasSwapPower = [false, false, false, false];
+        let hasSkipPower = [false, false, false, false];
+        let isSkippedNextTurn = [false, false, false, false]; 
+
+        let activeSwapCoins = [];
+        let activeSkipCoins = [];
+        const baseSwapCoins = [14, 38, 65];
+        const baseSkipCoins = [32, 60, 84]; 
+
+        const snakes = [{ start: 98, end: 28, color: '#ff2a2a' }, { start: 73, end: 15, color: '#1e90ff' }, { start: 52, end: 6, color: '#ffd32a' }];
+        const ladders = [{ start: 8, end: 39 }, { start: 21, end: 59 }, { start: 43, end: 76 }];
+
+        window.onload = function() {
+            // ऑटोमैटिकली गेम रिसेट करें ताकि स्क्रीन लोड रहे
+            resetGameToStart();
+            drawBoard();
+        };
+
+        function showGameLayout() {
+            document.getElementById('mode-screen').style.display = 'none';
+            document.getElementById('game-container-wrapper').style.display = 'flex';
+        }
+
+        function addLogMessage(text, color="#ffffff") {
+            const container = document.getElementById('chat-messages');
+            if(!container) return;
+            const div = document.createElement('div');
+            div.className = 'msg';
+            div.style.color = color;
+            div.innerHTML = text;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function leaveGame() {
+            document.getElementById('game-container-wrapper').style.display = 'none';
+            document.getElementById('mode-screen').style.display = 'block';
+        }
+
+        function startOfflineMode(mode) {
+            initAudio(); // यूजर के बटन दबाते ही साउंड इंजन एक्टिवेट करें
+            stopMenuMusic(); 
+            try { startMenuMusic(); } catch(e){} // बैकग्राउंड म्यूजिक शुरू करने का सुरक्षित प्रयास
+
+            gameMode = mode;
+            playerThemes[0].name = "Player 1";
+            playerThemes[1].name = "Player 2";
+            playerThemes[2].name = "Player 3";
+            playerThemes[3].name = "Player 4";
+            playerThemes[1].base = "#1e90ff";
+
+            if (mode === 'single') { 
+                totalPlayers = 2; 
+                playerThemes[1].name = "Computer 🤖"; 
+                playerThemes[1].base = "#95a5a6"; 
+            }
+            else if (mode === 'double') { totalPlayers = 2; }
+            else if (mode === 'three') { totalPlayers = 3; }
+            else if (mode === 'four') { totalPlayers = 4; }
+            
+            showGameLayout();
+            document.getElementById('game-title').innerText = mode.toUpperCase() + " Players";
+            resetGameToStart();
+            
+            // फिक्स: मोड सेलेक्ट करते ही तुरंत टोकन्स और बोर्ड ड्रा करें 
+            for(let i=0; i<totalPlayers; i++){
+                let target = getTileCoordinates(1);
+                playerCurrentX[i] = target.x + tileSize / 2;
+                playerCurrentY[i] = target.y + tileSize / 2;
+            }
+            drawBoard();
+            updateTurnUI();
+        }
+
+        function handleDiceClick() {
+            if (isAnimating) return;
+            if (gameMode === 'single' && currentTurn === 1) return;
+
+            const diceResult = Math.floor(Math.random() * 6) + 1;
+            triggerLiveDiceRoll(diceResult, currentTurn);
+        }
+
+        function triggerLiveDiceRoll(diceResult, actionPlayerId) {
+            const diceEl = document.getElementById('dice');
+            isAnimating = true; 
+            document.getElementById('roll-btn').disabled = true; 
+            document.getElementById('swap-btn').style.display = 'none'; 
+            document.getElementById('skip-btn').style.display = 'none';
+            diceEl.classList.add('rolling');
+            
+            let count = 0;
+            let shuffleInterval = setInterval(() => {
+                playDiceSound(); 
+                diceEl.innerText = Math.floor(Math.random() * 6) + 1;
+                if(count++ > 6) {
+                    clearInterval(shuffleInterval);
+                    diceEl.classList.remove('rolling'); 
+                    diceEl.innerText = diceResult;
+                    
+                    lastDiceRolled = diceResult; 
+
+                    if(diceResult === 6) {
+                        addLogMessage(`🎲 <b>${playerThemes[actionPlayerId].name}</b> rolled a <b>6</b> and earned a <b>Bonus Turn!</b> 🎉`, "#ffea00");
+                    } else {
+                        addLogMessage(`🎲 ${playerThemes[actionPlayerId].name} rolled: <b>${diceResult}</b>`, "#00ffcc");
+                    }
+                    
+                    movePlayerLogic(diceResult, actionPlayerId);
+                }
+            }, 90);
+        }
+
+        function handleSwapPositions() {
+            if (isAnimating || !hasSwapPower[currentTurn]) return;
+
+            let optionsStr = "";
+            let validTargets = [];
+            for (let i = 0; i < totalPlayers; i++) {
+                if (i !== currentTurn) {
+                    optionsStr += `Player ${i + 1} (${playerThemes[i].name})\n`;
+                    validTargets.push(i + 1);
+                }
+            }
+
+            let input = prompt(`किस प्लेयर के साथ जगह बदलनी है? नंबर डालें:\n\n${optionsStr}`);
+            let chosenPlayerNum = parseInt(input);
+
+            if (isNaN(chosenPlayerNum) || !validTargets.includes(chosenPlayerNum)) {
+                alert("गलत चुनाव! कृपया सही प्लेयर नंबर चुनें।");
+                return;
+            }
+
+            let targetTargetId = chosenPlayerNum - 1;
+
+            let tempPos = playerPositions[currentTurn];
+            playerPositions[currentTurn] = playerPositions[targetTargetId];
+            playerPositions[targetTargetId] = tempPos;
+
+            playCoinSound(); 
+            addLogMessage(`🔄 <b>${playerThemes[currentTurn].name}</b> swapped with <b>${playerThemes[targetTargetId].name}</b>!`, "#ff9f43");
+            
+            hasSwapPower[currentTurn] = false;
+            document.getElementById('swap-btn').style.display = 'none';
+
+            isAnimating = true;
+            animateTokens(currentTurn, true); 
+        }
+
+        function handleSkipPlayer() {
+            if (isAnimating || !hasSkipPower[currentTurn]) return;
+
+            let optionsStr = "";
+            let validTargets = [];
+            for (let i = 0; i < totalPlayers; i++) {
+                if (i !== currentTurn) {
+                    optionsStr += `Player ${i + 1} (${playerThemes[i].name})\n`;
+                    validTargets.push(i + 1);
+                }
+            }
+
+            let input = prompt(`किस प्लेयर की चाल कट करनी है? नंबर डालें:\n\n${optionsStr}`);
+            let chosenPlayerNum = parseInt(input);
+
+            if (isNaN(chosenPlayerNum) || !validTargets.includes(chosenPlayerNum)) {
+                alert("गलत चुनाव! कृपया सही प्लेयर नंबर चुनें।");
+                return;
+            }
+
+            let targetId = chosenPlayerNum - 1;
+            isSkippedNextTurn[targetId] = true;
+
+            playCoinSound();
+            addLogMessage(`🚫 <b>${playerThemes[currentTurn].name}</b> locked <b>${playerThemes[targetId].name}'s</b> next turn!`, "#9b59b6");
+
+            hasSkipPower[currentTurn] = false;
+            document.getElementById('skip-btn').style.display = 'none';
+        }
+
+        function getTileCoordinates(tileNumber) {
+            let zeroBased = tileNumber - 1; let row = Math.floor(zeroBased / 10); let col = zeroBased % 10;
+            if (row % 2 !== 0) col = 9 - col;
+            return { x: col * tileSize, y: (9 - row) * tileSize };
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 1; i <= 100; i++) {
+                const { x, y } = getTileCoordinates(i);
+                ctx.fillStyle = (Math.floor((i-1)/10) + i) % 2 === 0 ? '#2c3e50' : '#34495e';
+                ctx.fillRect(x, y, tileSize, tileSize);
+                ctx.strokeStyle = '#1a252f'; ctx.strokeRect(x, y, tileSize, tileSize);
+                ctx.fillStyle = '#bdc3c7'; ctx.font = 'bold 8px Arial'; ctx.fillText(i, x + 3, y + 11);
+
+                if (activeSwapCoins.includes(i)) {
+                    ctx.beginPath();
+                    ctx.arc(x + tileSize - 8, y + 8, 4, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#ff9f43';
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.stroke();
+                }
+
+                if (activeSkipCoins.includes(i)) {
+                    ctx.beginPath();
+                    ctx.arc(x + 8, y + tileSize - 8, 4, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#9b59b6';
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.stroke();
+                }
+            }
+
+            ladders.forEach(l => {
+                const f = getTileCoordinates(l.start); const t = getTileCoordinates(l.end);
+                ctx.save(); ctx.strokeStyle = '#8B4513'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(f.x+tileSize/2, f.y+tileSize/2); ctx.lineTo(t.x+tileSize/2, t.y+tileSize/2); ctx.stroke(); ctx.restore();
+            });
+
+            snakes.forEach(s => {
+                const f = getTileCoordinates(s.start); const t = getTileCoordinates(s.end);
+                ctx.save(); ctx.strokeStyle = s.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(f.x+tileSize/2, f.y+tileSize/2); ctx.lineTo(t.x+tileSize/2, t.y+tileSize/2); ctx.stroke(); ctx.restore();
+            });
+
+            for(let i = 0; i < totalPlayers; i++) {
+                let offX = (i % 2 === 0) ? -4 : 4; let offY = (i < 2) ? -3 : 3;
+                ctx.beginPath(); ctx.arc(playerCurrentX[i] + offX, playerCurrentY[i] + offY, 6, 0, 2 * Math.PI);
+                ctx.fillStyle = playerThemes[i].base; ctx.fill(); ctx.strokeStyle = 'white'; ctx.stroke();
+            }
+        }
+
+        function animateTokens(actionPlayerId, isManualSwap = false) {
+            let moving = false;
+            for (let i = 0; i < totalPlayers; i++) {
+                let target = getTileCoordinates(playerPositions[i]);
+                let targetX = target.x + tileSize / 2; let targetY = target.y + tileSize / 2;
+                let dx = targetX - playerCurrentX[i]; let dy = targetY - playerCurrentY[i];
+                if (Math.abs(dx) > 4) { playerCurrentX[i] += Math.sign(dx) * 4; moving = true; } else { playerCurrentX[i] = targetX; }
+                if (Math.abs(dy) > 4) { playerCurrentY[i] += Math.sign(dy) * 4; moving = true; } else { playerCurrentY[i] = targetY; }
+            }
+            drawBoard();
+            
+            if (moving) { 
+                requestAnimationFrame(() => animateTokens(actionPlayerId, isManualSwap)); 
+            } else {
+                isAnimating = false; 
+
+                if (lastDiceRolled === 6 && !isManualSwap) {
+                    addLogMessage(`🔁 <b>${playerThemes[actionPlayerId].name}</b> plays again!`, "#ffea00");
+                } else {
+                    let nextTurn = (actionPlayerId + 1) % totalPlayers;
+                    
+                    if (isSkippedNextTurn[nextTurn]) {
+                        addLogMessage(`🚫 <b>${playerThemes[nextTurn].name}'s</b> turn was SKIPPED!`, "#ff4757");
+                        isSkippedNextTurn[nextTurn] = false; 
+                        currentTurn = (nextTurn + 1) % totalPlayers;
+                    } else {
+                        currentTurn = nextTurn;
+                    }
+                }
+
+                updateTurnUI(); 
+                
+                if (gameMode === 'single' && currentTurn === 1) {
+                    if (hasSwapPower[1]) {
+                        let tempPos = playerPositions[1];
+                        playerPositions[1] = playerPositions[0];
+                        playerPositions[0] = tempPos;
+                        playCoinSound(); 
+                        addLogMessage(`🔄 <b>Computer 🤖</b> swapped with you!`, "#ff9f43");
+                        hasSwapPower[1] = false;
+                        isAnimating = true;
+                        setTimeout(() => { animateTokens(1, true); }, 600);
+                    } else if (hasSkipPower[1]) {
+                        isSkippedNextTurn[0] = true;
+                        playCoinSound();
+                        addLogMessage(`🚫 <b>Computer 🤖</b> skipped your next turn!`, "#9b59b6");
+                        hasSkipPower[1] = false;
+                        setTimeout(() => { animateTokens(1, true); }, 600);
+                    } else {
+                        setTimeout(() => { triggerLiveDiceRoll(Math.floor(Math.random() * 6) + 1, 1); }, 700);
+                    }
+                }
+            }
+        }
+
+        function movePlayerLogic(dice, actionPlayerId) {
+            let currentPos = playerPositions[actionPlayerId];
+            if (currentPos + dice <= 100) {
+                currentPos += dice;
+                
+                if (activeSwapCoins.includes(currentPos)) {
+                    hasSwapPower[actionPlayerId] = true;
+                    activeSwapCoins = activeSwapCoins.filter(c => c !== currentPos); 
+                    playCoinSound(); 
+                    addLogMessage(`🪙 <b>${playerThemes[actionPlayerId].name}</b> collected a Swap Coin!`, "#ff9f43");
+                }
+
+                if (activeSkipCoins.includes(currentPos)) {
+                    hasSkipPower[actionPlayerId] = true;
+                    activeSkipCoins = activeSkipCoins.filter(c => c !== currentPos); 
+                    playCoinSound();
+                    addLogMessage(`🔮 <b>${playerThemes[actionPlayerId].name}</b> collected a Purple Skip Coin!`, "#9b59b6");
+                }
+
+                const s = snakes.find(sn => sn.start === currentPos); 
+                const l = ladders.find(ld => ld.start === currentPos);
+                
+                if (s) {
+                    currentPos = s.end;
+                    playSnakeSound(); 
+                    addLogMessage(`🐍 Snake Bite! ${playerThemes[actionPlayerId].name} dropped to ${currentPos}`, "#ff4757");
+                } else if (l) {
+                    currentPos = l.end;
+                    playLadderSound(); 
+                    addLogMessage(`🪜 Ladder Up! ${playerThemes[actionPlayerId].name} climbed to ${currentPos}`, "#2ed573");
+                } else {
+                    addLogMessage(`📍 ${playerThemes[actionPlayerId].name} moved to tile <b>${currentPos}</b>`, "#aaa");
+                }
+                playerPositions[actionPlayerId] = currentPos;
+            }
+            
+            animateTokens(actionPlayerId, false);
+            
+            if (currentPos === 100) { 
+                setTimeout(() => { alert(`${playerThemes[actionPlayerId].name} Won! 🎉`); leaveGame(); }, 400); 
+            }
+        }
+
+        function updateTurnUI() {
+            const indicator = document.getElementById('player-turn');
+            const swapBtn = document.getElementById('swap-btn');
+            const skipBtn = document.getElementById('skip-btn');
+            if(!indicator) return;
+            
+            indicator.innerText = playerThemes[currentTurn].name;
+            indicator.style.background = playerThemes[currentTurn].base;
+            
+            if (gameMode === 'single' && currentTurn === 1) {
+                document.getElementById('roll-btn').disabled = true; 
+                swapBtn.style.display = 'none';
+                skipBtn.style.display = 'none';
+            } else {
+                document.getElementById('roll-btn').disabled = isAnimating; 
+                
+                if (hasSwapPower[currentTurn] && !isAnimating) {
+                    swapBtn.style.display = 'block';
+                } else {
+                    swapBtn.style.display = 'none';
+                }
+
+                if (hasSkipPower[currentTurn] && !isAnimating) {
+                    skipBtn.style.display = 'block';
+                } else {
+                    skipBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function resetGameToStart() {
+            playerPositions = [1, 1, 1, 1];
+            hasSwapPower = [false, false, false, false];
+            hasSkipPower = [false, false, false, false];
+            isSkippedNextTurn = [false, false, false, false];
+            activeSwapCoins = [...baseSwapCoins]; 
+            activeSkipCoins = [...baseSkipCoins];
+            lastDiceRolled = 1; 
+            currentTurn = 0;
+            isAnimating = false;
+            const msgBox = document.getElementById('chat-messages');
+            if(msgBox) {
+                msgBox.innerHTML = '<div class="msg" style="color:#00ffcc;">System: Collect Coins to Swap positions! Rolling 6 grants a Bonus Turn!</div>';
+            }
+        }
+    </script>
+</body>
+</html>
